@@ -2,6 +2,7 @@ const MARKET_REPORT_CONFIG = Object.freeze({
   appId: 'market',
   folderProperty: 'MARKET_REPORT_FOLDER_ID',
   schemaVersion: '1.0.0',
+  supportedSchemaVersions: Object.freeze(['1.0.0', '1.1.0']),
   cacheKey: 'market-report-curator:m1:index',
   cacheSeconds: 180,
   maxFiles: 2000,

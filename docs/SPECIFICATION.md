@@ -17,10 +17,13 @@ Google Drive上の日次市場レポートJSONを正本として保護し、月�
 ## Required behavior
 
 - 日次JSONを検証し、月次JSONへ全フィールドを欠落なく複製する。
+- 日次JSONの `schema_version` は `1.0.0` と `1.1.0` を受け付け、その他は `UNSUPPORTED_SCHEMA` とする。
+- 月次DBの `archive_schema_version` は `1.0.0` を維持し、日次スキーマ1.0.0と1.1.0のレコード共存を許可する。
 - 同じ `source_file_id` と同じコンテンツハッシュは再同期時に変更しない。
 - 同じ `source_file_id` でコンテンツハッシュが変わった場合、そのIDの月次レコードだけを最新の日次JSON由来レコードへ置換する。
 - 同じ `market + market_date` を持つ別ファイルIDは競合として記録し、自動統合しない。
 - 変更検知は `modifiedSources`、置換件数は `replaced` で報告する。
+- 同期結果の `invalid` 件数を維持し、`invalidFiles` に対象ファイル名と検証エラーコードを報告する。
 - 月次DB保存時は候補ファイルを再読込検証し、既存正規版をバックアップしてから切り替える。
 - UIの原文と構造化表示は同じ月次レコードを参照する。
 

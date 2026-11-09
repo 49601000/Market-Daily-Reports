@@ -16,9 +16,11 @@ const base = overrides => Object.assign({
 const tests = [];
 function test(name, fn) { tests.push({name, fn}); }
 
-test('US report is valid', () => assert.equal(service.validate(base()).valid, true));
-test('JP report is valid', () => assert.equal(service.validate(base({market:'JP'})).valid, true));
-test('schema 1.0.0 is required', () => assert.equal(service.validate(base({schema_version:'2.0.0'})).code, 'UNSUPPORTED_SCHEMA'));
+test('schema 1.0.0 US report is valid', () => assert.equal(service.validate(base()).valid, true));
+test('schema 1.0.0 JP report is valid', () => assert.equal(service.validate(base({market:'JP'})).valid, true));
+test('schema 1.1.0 US report is valid', () => assert.equal(service.validate(base({schema_version:'1.1.0'})).valid, true));
+test('schema 1.1.0 JP report is valid', () => assert.equal(service.validate(base({schema_version:'1.1.0',market:'JP'})).valid, true));
+test('unsupported schema is rejected', () => assert.equal(service.validate(base({schema_version:'2.0.0'})).code, 'UNSUPPORTED_SCHEMA'));
 test('missing required field is rejected', () => { const r=base(); delete r.market_date; assert.equal(service.validate(r).code,'MISSING_REQUIRED_FIELD'); });
 test('optional fields may be absent', () => assert.equal(service.validate(base()).valid, true));
 test('invalid report_text type is rejected', () => assert.equal(service.validate(base({report_text:{}})).code,'INVALID_REPORT_TEXT'));

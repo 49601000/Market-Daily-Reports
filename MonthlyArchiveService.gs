@@ -90,7 +90,7 @@ const MonthlyArchiveService = (function () {
 
   function sync() {
     const started = new Date();
-    const result = { status:STATUS.FAILED, startedAt:started.toISOString(), finishedAt:null, durationMs:0, detected:0, added:0, existing:0, replaced:0, duplicates:0, modifiedSources:0, invalid:0, updatedMonths:[], writesSucceeded:0, writesFailed:0, errors:[] };
+    const result = { status:STATUS.FAILED, startedAt:started.toISOString(), finishedAt:null, durationMs:0, detected:0, added:0, existing:0, replaced:0, duplicates:0, modifiedSources:0, invalid:0, invalidFiles:[], updatedMonths:[], writesSucceeded:0, writesFailed:0, errors:[] };
     const lock = LockService.getScriptLock();
     if (!lock.tryLock(MONTHLY_ARCHIVE_CONFIG.lockWaitMs)) { result.status=STATUS.LOCK_BUSY; return finish_(result, started); }
     try {
@@ -103,7 +103,7 @@ const MonthlyArchiveService = (function () {
       });
       const daily = MarketReportRepository.listFiles();
       const built = buildArchives(daily.files, existing, Utilities.formatDate(new Date(), 'Asia/Tokyo', "yyyy-MM-dd'T'HH:mm:ssXXX"));
-      Object.assign(result, { detected:built.diagnostics.detected, added:built.diagnostics.added, existing:built.diagnostics.existing, replaced:built.diagnostics.replaced, duplicates:built.diagnostics.duplicates.length, modifiedSources:built.diagnostics.modifiedSources.length, invalid:built.diagnostics.invalid.length, updatedMonths:built.diagnostics.changedMonths });
+      Object.assign(result, { detected:built.diagnostics.detected, added:built.diagnostics.added, existing:built.diagnostics.existing, replaced:built.diagnostics.replaced, duplicates:built.diagnostics.duplicates.length, modifiedSources:built.diagnostics.modifiedSources.length, invalid:built.diagnostics.invalid.length, invalidFiles:built.diagnostics.invalid, updatedMonths:built.diagnostics.changedMonths });
       built.diagnostics.changedMonths.forEach(function (month) {
         try { MonthlyArchiveRepository.saveArchive(month, built.archives[month]); result.writesSucceeded += 1; }
         catch (error) { result.writesFailed += 1; result.errors.push(String(error && error.message || error)); }

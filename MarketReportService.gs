@@ -86,7 +86,7 @@ const MarketReportService = (function () {
 
   function validate(raw) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return invalid_('INVALID_ROOT');
-    if (raw.schema_version !== MARKET_REPORT_CONFIG.schemaVersion) return invalid_('UNSUPPORTED_SCHEMA');
+    if (MARKET_REPORT_CONFIG.supportedSchemaVersions.indexOf(raw.schema_version) < 0) return invalid_('UNSUPPORTED_SCHEMA');
     if (MARKET_REPORT_CONFIG.requiredFields.some(function (key) { return !Object.prototype.hasOwnProperty.call(raw, key); })) return invalid_('MISSING_REQUIRED_FIELD');
     if (MARKET_REPORT_CONFIG.allowedMarkets.indexOf(raw.market) < 0) return invalid_('INVALID_MARKET');
     if (!isCalendarDate_(raw.market_date)) return invalid_('INVALID_MARKET_DATE');

@@ -1,29 +1,39 @@
 # Specification
 
-Status: Not defined — replace this template when starting a project.
+Status: Active
 
 ## Purpose
-<!-- What problem does this personal tool solve? -->
-To be defined.
+
+Google Drive上の日次市場レポートJSONを正本として保護し、月次アーカイブへ同期してWeb画面から閲覧できるようにする。
 
 ## Intended users and environment
+
 - Intended user: Personal use
-- Runtime / platform: To be defined
-- Data source(s): To be defined
-- Source of truth for operational data (if any): To be defined
+- Runtime / platform: Google Apps Script Web app
+- Data sources: `MARKET_REPORT_FOLDER_ID` 内の日次JSON
+- Derived data: `MARKET_MONTHLY_FOLDER_ID` 内の `YYYY-MM.json`
+- Source of truth: 日次JSON。月次JSONは再生成可能な派生DB。
 
 ## Required behavior
-<!-- Describe observable behavior; add precise data definitions only where needed. -->
-To be defined.
+
+- 日次JSONを検証し、月次JSONへ全フィールドを欠落なく複製する。
+- 同じ `source_file_id` と同じコンテンツハッシュは再同期時に変更しない。
+- 同じ `source_file_id` でコンテンツハッシュが変わった場合、そのIDの月次レコードだけを最新の日次JSON由来レコードへ置換する。
+- 同じ `market + market_date` を持つ別ファイルIDは競合として記録し、自動統合しない。
+- 変更検知は `modifiedSources`、置換件数は `replaced` で報告する。
+- 月次DB保存時は候補ファイルを再読込検証し、既存正規版をバックアップしてから切り替える。
+- UIの原文と構造化表示は同じ月次レコードを参照する。
 
 ## Data handling and recoverability
-<!-- Note what is collected, transformed, stored, or exported; whether original data can be recovered; and any irreversible effects. -->
-To be defined.
+
+日次JSONは同期処理から変更しない。月次DBは保存前の正規版を `.backup-*` として保持し、候補の検証失敗時は正規版を維持する。
 
 ## Out of scope
-<!-- Only add exclusions that matter. -->
-To be defined.
+
+- 日次JSONの自動修復
+- 競合する別ファイルIDの自動統合
+- 本リポジトリ変更だけによるGASデプロイや本番同期
 
 ## Acceptance
-<!-- Minimal practical condition for calling the requested behavior usable. -->
-To be defined.
+
+同一IDの更新が対象レコードだけへ完全反映され、再同期が冪等であり、保存検証失敗時に既存月次DBが保護されること。

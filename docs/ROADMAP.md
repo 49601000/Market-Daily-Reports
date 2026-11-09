@@ -1,21 +1,22 @@
 # Roadmap and Progress
 
-Last updated: Not started
-Current status: Template — no project work completed
+Last updated: 2026-11-09
+Current status: Phase M-4 implemented locally; deployment pending owner action
 
 ## Current position
-- Project goal and specification: Not yet defined
-- Implementation: Not started
-- Known blockers: None recorded
+
+- 日次JSONから月次派生DBを生成・閲覧するGASアプリを実装済み。
+- 同一ファイルIDの内容更新を月次レコードへ反映する同期仕様を実装済み。
+- ローカル模擬テスト67件が成功。
+- GASデプロイと本番データ同期は未実施。
 
 ## Next task
-- Define the first small, usable feature in `docs/SPECIFICATION.md`.
-- Implement it using the lightest viable workflow.
 
-## Later
-<!-- Add only milestones that become useful; do not invent phases or test gates. -->
-Not defined.
+- PRをレビューしてmainへマージする。
+- 承認後にGASへ反映し、同期プレビューを確認してから実同期する。
 
 ## Completed
-<!-- Record significant completed milestones briefly. -->
-None.
+
+- 月次アーカイブの候補保存、再読込検証、バックアップ切替。
+- 構造化・原文表示とUS/JPフィルター。
+- 同一ID・異なるハッシュの対象レコード限定置換と診断件数追加。

@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="dark">
+  <title>Market Report Curator</title>
+  <style>
+    :root { --bg:#080d17; --panel:#111827; --panel2:#172033; --line:#28344b; --text:#edf2fb; --muted:#92a0b8; --accent:#60a5fa; --us:#8b5cf6; --jp:#ef4444; --ok:#34d399; --warn:#fbbf24; }
+    * { box-sizing:border-box; }
+    html, body { height:100%; }
+    body { margin:0; background:var(--bg); color:var(--text); font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; overflow:hidden; }
+    button, select { font:inherit; color:inherit; }
+    button { cursor:pointer; }
+    .header { height:64px; display:flex; align-items:center; gap:15px; padding:0 20px; border-bottom:1px solid var(--line); background:rgba(8,13,23,.94); }
+    .icon-btn { width:40px; height:40px; border:1px solid var(--line); border-radius:10px; background:var(--panel); font-size:20px; }
+    .icon-btn:hover,.icon-btn:focus-visible { border-color:var(--accent); outline:none; }
+    .brand { flex:1; min-width:0; }
+    .brand h1 { margin:0; font-size:18px; letter-spacing:.02em; }
+    .brand p { margin:1px 0 0; color:var(--muted); font-size:11px; }
+    .layout { height:calc(100vh - 64px); display:grid; grid-template-columns:minmax(320px, 410px) 1fr; }
+    .master { min-width:0; border-right:1px solid var(--line); display:flex; flex-direction:column; background:#0c1321; }
+    .filters { padding:16px; border-bottom:1px solid var(--line); }
+    .filter-row { display:flex; gap:10px; align-items:center; }
+    select { flex:1; padding:9px 12px; border:1px solid var(--line); border-radius:9px; background:var(--panel); }
+    .count { color:var(--muted); white-space:nowrap; }
+    .updated { margin-top:8px; color:var(--muted); font-size:11px; }
+    .tabs { display:grid; grid-template-columns:repeat(3,1fr); margin-top:12px; padding:3px; border:1px solid var(--line); border-radius:10px; background:#080d17; }
+    .tab { padding:7px; border:0; border-radius:7px; background:transparent; color:var(--muted); font-weight:700; }
+    .tab[aria-selected="true"] { background:var(--panel2); color:var(--text); }
+    .list { overflow:auto; padding:12px; }
+    .card { width:100%; text-align:left; color:inherit; display:block; padding:14px; margin-bottom:10px; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+    .card:hover,.card:focus-visible { border-color:#4d6388; outline:none; transform:translateY(-1px); }
+    .card.selected { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
+    .card-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .market { display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; background:color-mix(in srgb,var(--us) 25%,transparent); color:#c4b5fd; }
+    .market.jp { background:color-mix(in srgb,var(--jp) 22%,transparent); color:#fca5a5; }
+    .date { font-weight:750; }
+    .title { margin:9px 0 7px; font-size:15px; font-weight:700; }
+    .meta { display:flex; justify-content:space-between; gap:8px; color:var(--muted); font-size:11px; }
+    .status { color:var(--ok); }
+    .detail { overflow:auto; padding:28px clamp(20px,4vw,54px); }
+    .detail-inner { max-width:900px; margin:auto; }
+    .detail-head { padding-bottom:18px; border-bottom:1px solid var(--line); }
+    .detail-head-row { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+    .detail-title { min-width:0; }
+    .detail-head h2 { margin:10px 0 6px; font-size:24px; }
+    .view-switch { flex:0 0 auto; display:flex; gap:2px; padding:3px; border:1px solid var(--line); border-radius:9px; background:#080d17; }
+    .view-switch button { border:0; border-radius:6px; padding:5px 9px; background:transparent; color:var(--muted); font-size:11px; font-weight:700; }
+    .view-switch button[aria-pressed="true"] { background:var(--panel2); color:var(--text); }
+    .view-switch button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+    .reference { margin-top:9px; color:var(--muted); font-size:12px; }
+    .report { margin:24px 0; white-space:pre-wrap; overflow-wrap:anywhere; font-family:inherit; line-height:1.8; }
+    .section { margin:28px 0; }
+    .section h3 { margin:0 0 14px; font-size:17px; }
+    .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(175px,1fr)); gap:12px; }
+    .metric-card { min-width:0; padding:15px; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+    .metric-name { color:var(--muted); font-size:12px; font-weight:700; }
+    .metric-value { margin-top:7px; font-size:23px; font-weight:780; letter-spacing:-.02em; overflow-wrap:anywhere; }
+    .metric-change { margin-top:2px; font-size:13px; font-weight:700; }
+    .positive { color:#6ee7b7; }
+    .negative { color:#fca5a5; }
+    .metric-asof,.metric-note { margin-top:8px; color:var(--muted); font-size:10px; overflow-wrap:anywhere; }
+    .unverified { display:inline-flex; margin-top:8px; padding:2px 6px; border:1px solid #92400e; border-radius:999px; color:#fcd34d; font-size:10px; font-weight:800; }
+    .content-card { margin-bottom:12px; padding:16px; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+    .content-card h4 { margin:0 0 10px; font-size:14px; }
+    .fact-list { margin:0; padding-left:20px; }
+    .fact-list li + li { margin-top:5px; }
+    .interpretation { margin:12px 0 0; padding:11px 13px; border-left:3px solid var(--accent); background:#0d1627; color:#cbd5e1; }
+    .sub-label { display:block; margin-bottom:4px; color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.08em; }
+    .event-list { display:grid; gap:10px; }
+    .event { display:grid; grid-template-columns:minmax(125px,auto) 1fr; gap:14px; padding:13px 15px; border:1px solid var(--line); border-radius:11px; background:var(--panel); }
+    .event-date { color:#bfdbfe; font-weight:750; }
+    .event-time,.event-extra { color:var(--muted); font-size:11px; }
+    .soon { display:inline-flex; margin-left:7px; padding:1px 6px; border-radius:999px; background:#3b2b0b; color:#fde68a; font-size:9px; font-weight:800; vertical-align:middle; }
+    .scenario-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:11px; }
+    .scenario { padding:15px; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+    .scenario.bull { border-top:3px solid #34d399; }
+    .scenario.base { border-top:3px solid #60a5fa; }
+    .scenario.bear { border-top:3px solid #f87171; }
+    .scenario strong { display:block; margin-bottom:8px; }
+    .outlook-note { margin-top:11px; color:var(--muted); font-size:12px; }
+    details.supplement { margin:12px 0; border:1px solid var(--line); border-radius:11px; background:var(--panel); }
+    details.supplement summary { padding:13px 15px; cursor:pointer; font-weight:750; }
+    .supplement-body { padding:0 15px 15px; color:#cbd5e1; }
+    .data-group + .data-group { margin-top:17px; }
+    .data-group h4 { margin:0 0 8px; }
+    .data-row { padding:8px 0; border-top:1px solid var(--line); overflow-wrap:anywhere; }
+    .data-row:first-of-type { border-top:0; }
+    .source-list,.quality-list { margin:0; padding-left:20px; }
+    .source-list li + li,.quality-list li + li { margin-top:7px; }
+    a.source-link { color:#93c5fd; overflow-wrap:anywhere; }
+    .empty { padding:40px 18px; color:var(--muted); text-align:center; }
+    .error { margin:14px; padding:13px; border:1px solid #7f1d1d; border-radius:10px; background:#2b1118; color:#fecaca; }
+    .back { display:none; margin-bottom:16px; border:0; background:transparent; color:var(--accent); padding:0; }
+    .overlay { position:fixed; inset:0; z-index:20; background:rgba(0,0,0,.55); opacity:0; pointer-events:none; transition:.18s; }
+    .drawer { position:fixed; z-index:21; inset:0 auto 0 0; width:min(330px,88vw); padding:22px; background:#0d1524; border-right:1px solid var(--line); transform:translateX(-102%); transition:.18s; }
+    .drawer.open { transform:none; }
+    .overlay.open { opacity:1; pointer-events:auto; }
+    .drawer-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:30px; }
+    .drawer-label { color:var(--muted); font-size:11px; letter-spacing:.14em; font-weight:800; }
+    .nav-current { margin-top:10px; padding:13px; border:1px solid var(--accent); border-radius:11px; background:#14213a; }
+    .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+    @media (max-width:700px) {
+      body { overflow:auto; }
+      .header { position:sticky; top:0; z-index:10; padding:0 12px; }
+      .layout { height:calc(100vh - 64px); display:block; }
+      .master { min-height:100%; border:0; }
+      .detail { display:none; min-height:100%; padding:20px 16px 40px; }
+      body.show-detail .master { display:none; }
+      body.show-detail .detail { display:block; }
+      .back { display:inline-block; }
+      .brand p { display:none; }
+      .detail-head-row { gap:10px; }
+      .detail-head h2 { font-size:21px; }
+      .view-switch button { padding:5px 7px; }
+      .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .metric-value { font-size:19px; }
+      .scenario-grid { grid-template-columns:1fr; }
+      .event { grid-template-columns:1fr; gap:5px; }
+    }
+    @media (max-width:390px) { .metric-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <button id="menuButton" class="icon-btn" aria-label="メニューを開く" aria-controls="drawer" aria-expanded="false">☰</button>
+    <div class="brand"><h1>Market Report Curator</h1><p>日本・米国市場レポート アーカイブ</p></div>
+    <button id="reloadButton" class="icon-btn" aria-label="再読込" title="再読込">↻</button>
+  </header>
+
+  <div class="layout">
+    <section class="master" aria-label="レポート一覧">
+      <div class="filters">
+        <div class="filter-row">
+          <label class="sr-only" for="monthSelect">年月</label>
+          <select id="monthSelect" disabled><option>読込中...</option></select>
+          <span id="count" class="count">0件</span>
+        </div>
+        <div class="tabs" role="tablist" aria-label="市場">
+          <button class="tab" role="tab" data-market="ALL" aria-selected="true">ALL</button>
+          <button class="tab" role="tab" data-market="US" aria-selected="false">US</button>
+          <button class="tab" role="tab" data-market="JP" aria-selected="false">JP</button>
+        </div>
+        <div id="updatedAt" class="updated">月次DB最終更新：--</div>
+      </div>
+      <div id="notice" aria-live="polite"></div>
+      <div id="list" class="list"><div class="empty">レポートを読み込んでいます...</div></div>
+    </section>
+    <main id="detail" class="detail" tabindex="-1">
+      <div class="detail-inner">
+        <button id="backButton" class="back">← 一覧へ戻る</button>
+        <div id="detailContent" class="empty">左の一覧からレポートを選択してください。</div>
+      </div>
+    </main>
+  </div>
+
+  <div id="overlay" class="overlay"></div>
+  <aside id="drawer" class="drawer" aria-hidden="true" aria-label="ナビゲーション">
+    <div class="drawer-head"><strong>L1 Research</strong><button id="closeMenu" class="icon-btn" aria-label="メニューを閉じる">×</button></div>
+    <div class="drawer-label">L1 RESEARCH WORKSPACE</div>
+    <div id="navItems"><div class="nav-current" aria-current="page">Market Report Curator</div></div>
+  </aside>
+
+  <script>
+    (() => {
+      'use strict';
+      const state = { records: [], months: [], month: null, market: 'ALL', selectedId: null, viewMode: 'structured' };
+      const $ = id => document.getElementById(id);
+      const els = { list:$('list'), month:$('monthSelect'), count:$('count'), notice:$('notice'), detail:$('detail'), detailContent:$('detailContent'), drawer:$('drawer'), overlay:$('overlay'), menuButton:$('menuButton') };
+
+      function callServer(name, args, success, failure) {
+        let runner = google.script.run.withSuccessHandler(success).withFailureHandler(failure);
+        runner[name].apply(runner, args || []);
+      }
+
+      function load(force) {
+        $('reloadButton').disabled = true;
+        els.notice.innerHTML = '';
+        callServer('getMonthlyReportMonths', [], onMonths, () => showFatal('サーバーとの通信に失敗しました。'));
+      }
+
+      function onMonths(payload) {
+        if (!payload || !payload.ok) return showFatal(payload && payload.error ? payload.error.message : '月次DB一覧を取得できませんでした。');
+        state.months = payload.months || [];
+        if (!state.month || state.months.indexOf(state.month) < 0) state.month = payload.latestMonth;
+        renderMonths(state.months);
+        if (!state.month) { $('reloadButton').disabled=false; state.records=[]; renderList(); return; }
+        loadMonth(state.month);
+      }
+
+      function loadMonth(month) {
+        $('reloadButton').disabled = true;
+        els.list.innerHTML='<div class="empty">月次DBを読み込んでいます...</div>';
+        callServer('getMonthlyReportArchive',[month],onArchive,()=>showFatal('月次DBの通信に失敗しました。'));
+      }
+
+      function onArchive(payload) {
+        $('reloadButton').disabled=false;
+        if (!payload || !payload.ok) return showFatal(payload&&payload.error?payload.error.message:'月次DBを取得できませんでした。');
+        const archive=payload.archive;
+        state.records=(archive.records||[]).map(toUiRecord);
+        $('updatedAt').textContent='月次DB最終更新：'+formatUpdated(archive.updated_at_jst);
+        renderList();
+        const visible = filtered();
+        if (state.selectedId && !visible.some(r=>r.id===state.selectedId)) state.selectedId=null;
+        if (!state.selectedId && visible.length && innerWidth > 700) selectReport(visible[0].id, false);
+      }
+
+      function toUiRecord(raw) { return {id:raw.source_file_id,fileName:raw.source_file_name,market:raw.market,marketDate:raw.market_date,month:raw.market_date.slice(0,7),generatedAtJst:raw.generated_at_jst,sessionStatus:raw.session_status,reportText:raw.report_text||null,structured:raw}; }
+
+      function showFatal(message) {
+        $('reloadButton').disabled = false;
+        els.month.disabled = true;
+        els.list.innerHTML = '';
+        const box = document.createElement('div'); box.className = 'error'; box.textContent = message; els.list.appendChild(box);
+      }
+
+      function renderMonths(months) {
+        els.month.replaceChildren();
+        months.forEach(month => {
+          const option = document.createElement('option'); option.value = month;
+          const parts = month.split('-'); option.textContent = Number(parts[0]) + '年' + Number(parts[1]) + '月';
+          option.selected = month === state.month; els.month.appendChild(option);
+        });
+        els.month.disabled = !months.length;
+      }
+
+      function filtered() { return state.records.filter(r => r.month === state.month && (state.market === 'ALL' || r.market === state.market)); }
+
+      function renderList() {
+        const rows = filtered(); els.count.textContent = rows.length + '件'; els.list.replaceChildren();
+        if (!rows.length) { const empty=document.createElement('div'); empty.className='empty'; empty.textContent=state.records.length?'この条件のレポートはありません。':'有効なレポートはまだありません。'; els.list.appendChild(empty); return; }
+        rows.forEach(record => {
+          const card=document.createElement('button'); card.type='button'; card.className='card' + (record.id===state.selectedId?' selected':''); card.dataset.id=record.id;
+          card.setAttribute('aria-pressed', String(record.id===state.selectedId));
+          const top=document.createElement('div'); top.className='card-top';
+          const market=document.createElement('span'); market.className='market '+record.market.toLowerCase(); market.textContent=record.market;
+          const date=document.createElement('span'); date.className='date'; date.textContent=record.marketDate; top.append(market,date);
+          const title=document.createElement('div'); title.className='title'; title.textContent=record.market==='US'?'米国市場レポート':'日本市場レポート';
+          const meta=document.createElement('div'); meta.className='meta';
+          const status=document.createElement('span'); status.className='status'; status.textContent=sessionLabel(record.sessionStatus);
+          const generated=document.createElement('span'); generated.textContent=formatGenerated(record.generatedAtJst); meta.append(status,generated);
+          card.append(top,title,meta); card.addEventListener('click',()=>selectReport(record.id,true)); els.list.appendChild(card);
+        });
+      }
+
+      function selectReport(id, mobileNavigate) {
+        state.selectedId=id; renderList();
+        if (mobileNavigate) { document.body.classList.add('show-detail'); els.detail.focus(); }
+        const record=state.records.find(r=>r.id===id);
+        renderDetail(record?{ok:true,report:record}:{ok:false,error:{message:'月次DB内に詳細がありません。'}});
+      }
+
+      function renderDetail(payload) {
+        els.detailContent.replaceChildren(); els.detailContent.className='';
+        if (!payload || !payload.ok) { const box=document.createElement('div'); box.className='error'; box.textContent=payload&&payload.error?payload.error.message:'詳細を取得できませんでした。'; els.detailContent.appendChild(box); return; }
+        const r=payload.report; const raw=r.structured||{}; const head=document.createElement('div'); head.className='detail-head';
+        const row=document.createElement('div'); row.className='detail-head-row'; const title=document.createElement('div'); title.className='detail-title';
+        const badge=document.createElement('span'); badge.className='market '+r.market.toLowerCase(); badge.textContent=r.market;
+        const h=document.createElement('h2'); h.textContent=(r.market==='US'?'米国':'日本')+'市場レポート｜'+r.marketDate;
+        const meta=document.createElement('div'); meta.className='meta'; meta.append(document.createTextNode(sessionLabel(r.sessionStatus)+'　生成: '+formatGenerated(r.generatedAtJst)));
+        title.append(badge,h,meta); const refs=referenceLabel(raw); if(refs){const ref=document.createElement('div');ref.className='reference';ref.textContent=refs;title.appendChild(ref);}
+        row.append(title,buildViewSwitch()); head.appendChild(row); els.detailContent.appendChild(head);
+        if(state.viewMode==='raw') renderRaw(r); else renderStructured(r);
+      }
+
+      function buildViewSwitch() {
+        const wrap=document.createElement('div'); wrap.className='view-switch'; wrap.setAttribute('aria-label','表示形式');
+        [['structured','構造化'],['raw','原文']].forEach(([mode,label])=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.setAttribute('aria-pressed',String(state.viewMode===mode));button.addEventListener('click',()=>{if(state.viewMode===mode)return;state.viewMode=mode;const record=state.records.find(x=>x.id===state.selectedId);if(record)renderDetail({ok:true,report:record});});wrap.appendChild(button);});
+        return wrap;
+      }
+
+      function renderRaw(r) { const report=document.createElement('div'); report.className='report'; report.textContent=hasText(r.reportText)?r.reportText:'本文（report_text）は利用できません。'; els.detailContent.appendChild(report); }
+
+      function renderStructured(r) {
+        const raw=r.structured||{}; let rendered=0;
+        rendered+=renderIndices(raw.indices);
+        rendered+=renderDrivers(raw.drivers);
+        rendered+=renderEvents(raw.upcoming_events);
+        rendered+=renderOutlook(raw.outlook);
+        rendered+=renderSupplement(raw);
+        if(!rendered){const empty=document.createElement('div');empty.className='empty';empty.textContent='構造化データは利用できません。右上から原文を表示できます。';els.detailContent.appendChild(empty);}
+      }
+
+      function renderIndices(indices) {
+        if(!isObject(indices)||!Object.keys(indices).length)return 0;
+        const section=makeSection('主要市場指標'); const grid=document.createElement('div');grid.className='metric-grid';
+        orderedIndicators(indices).forEach(([key,item])=>grid.appendChild(metricCard(key,isObject(item)?item:{})));
+        section.appendChild(grid);els.detailContent.appendChild(section);return 1;
+      }
+
+      function orderedIndicators(indices) {
+        const priority=['NIKKEI225','TOPIX','SP500','NASDAQ_COMPOSITE','DOW','RUSSELL2000','SOX','VIX','JP10Y','US10Y','USDJPY','WTI'];
+        return Object.entries(indices).sort((a,b)=>{const ai=priority.indexOf(a[0]),bi=priority.indexOf(b[0]);return (ai<0?999:ai)-(bi<0?999:bi);});
+      }
+
+      function metricCard(key,item) {
+        const card=document.createElement('article');card.className='metric-card';
+        const name=document.createElement('div');name.className='metric-name';name.textContent=hasText(item.name)?item.name:key;
+        const value=document.createElement('div');value.className='metric-value';value.textContent=formatMetric(item.value,item.unit);
+        card.append(name,value);
+        if(item.change!==null&&item.change!==undefined){const change=document.createElement('div');change.className='metric-change '+(Number(item.change)>0?'positive':Number(item.change)<0?'negative':'');change.textContent=formatChange(item.change,item.change_unit);card.appendChild(change);}
+        const basis=[];if(hasText(item.reference_market_date))basis.push('参照日: '+item.reference_market_date);if(hasText(item.as_of))basis.push('基準: '+item.as_of);
+        if(basis.length){const asof=document.createElement('div');asof.className='metric-asof';asof.textContent=basis.join(' / ');card.appendChild(asof);}
+        if(item.unverified===true){const flag=document.createElement('span');flag.className='unverified';flag.textContent='未確認';card.appendChild(flag);}
+        if(hasText(item.note)){const note=document.createElement('div');note.className='metric-note';note.textContent=item.note;card.appendChild(note);}
+        return card;
+      }
+
+      function renderDrivers(drivers) {
+        if(!Array.isArray(drivers)||!drivers.length)return 0;const section=makeSection('市場を動かした材料');
+        drivers.forEach(driver=>{if(!isObject(driver))return;const card=document.createElement('article');card.className='content-card';const h=document.createElement('h4');h.textContent=hasText(driver.topic)?driver.topic:'市場材料';card.appendChild(h);
+          if(Array.isArray(driver.verified_facts)&&driver.verified_facts.length){const label=document.createElement('span');label.className='sub-label';label.textContent='確認された事実';const ul=document.createElement('ul');ul.className='fact-list';driver.verified_facts.forEach(f=>{if(!hasText(f))return;const li=document.createElement('li');li.textContent=f;ul.appendChild(li);});if(ul.childNodes.length)card.append(label,ul);}
+          if(hasText(driver.interpretation)){const box=document.createElement('p');box.className='interpretation';const label=document.createElement('span');label.className='sub-label';label.textContent='解釈・影響';box.append(label,document.createTextNode(driver.interpretation));card.appendChild(box);}section.appendChild(card);});
+        els.detailContent.appendChild(section);return 1;
+      }
+
+      function renderEvents(events) {
+        if(!Array.isArray(events)||!events.length)return 0;const section=makeSection('今後の注目イベント');const list=document.createElement('div');list.className='event-list';
+        events.forEach(event=>{if(!isObject(event))return;const card=document.createElement('article');card.className='event';const when=document.createElement('div');const date=document.createElement('div');date.className='event-date';date.textContent=hasText(event.date_jst)?event.date_jst:'日付未記載';if(event.within_36_hours===true){const soon=document.createElement('span');soon.className='soon';soon.textContent='36時間以内';date.appendChild(soon);}when.appendChild(date);if(hasText(event.time_jst)){const time=document.createElement('div');time.className='event-time';time.textContent=event.time_jst;when.appendChild(time);}const body=document.createElement('div');const name=document.createElement('strong');name.textContent=hasText(event.name)?event.name:'名称未記載';body.appendChild(name);[['forecast','予想'],['note','注記']].forEach(([key,label])=>{if(!hasText(event[key]))return;const extra=document.createElement('div');extra.className='event-extra';extra.textContent=label+': '+event[key];body.appendChild(extra);});card.append(when,body);list.appendChild(card);});
+        section.appendChild(list);els.detailContent.appendChild(section);return 1;
+      }
+
+      function renderOutlook(outlook) {
+        if(!isObject(outlook)||!Object.keys(outlook).length)return 0;const section=makeSection('市場見通し');const sessions=[];if(hasText(outlook.next_japan_session))sessions.push('次回日本市場: '+outlook.next_japan_session);if(hasText(outlook.next_us_session))sessions.push('次回米国市場: '+outlook.next_us_session);if(sessions.length){const ref=document.createElement('div');ref.className='reference';ref.textContent=sessions.join(' / ');section.appendChild(ref);}
+        const grid=document.createElement('div');grid.className='scenario-grid';[['bull','強気'],['base','基本'],['bear','弱気']].forEach(([key,label])=>{if(!hasText(outlook[key]))return;const card=document.createElement('article');card.className='scenario '+key;const h=document.createElement('strong');h.textContent=label;const text=document.createElement('div');text.textContent=outlook[key];card.append(h,text);grid.appendChild(card);});if(grid.childNodes.length)section.appendChild(grid);if(hasText(outlook.note)){const note=document.createElement('div');note.className='outlook-note';note.textContent=outlook.note;section.appendChild(note);}els.detailContent.appendChild(section);return 1;
+      }
+
+      function renderSupplement(raw) {
+        let count=0;const data=makeDetails('データ詳細');const body=document.createElement('div');body.className='supplement-body';
+        count+=appendObjectGroup(body,'先物価格',raw.futures_price);count+=appendArrayGroup(body,'先物出来高',raw.futures_volume,['product','contract_code','trade_date','volume_contracts','unit','publication_stage','note']);count+=appendObjectGroup(body,'暗号資産スナップショット',raw.crypto_weekend_snapshot);
+        if(count){data.appendChild(body);els.detailContent.appendChild(data);}
+        const sources=Array.isArray(raw.sources)?raw.sources:[];const quality=Array.isArray(raw.data_quality_notes)?raw.data_quality_notes:[];
+        if(sources.length||quality.length){const details=makeDetails('取得元・品質注記');const inner=document.createElement('div');inner.className='supplement-body';if(sources.length){const ul=document.createElement('ul');ul.className='source-list';sources.forEach(source=>{if(!isObject(source))return;const li=document.createElement('li');const label=hasText(source.name)?source.name:'取得元';const safe=safeHttpUrl(source.url);if(safe){const link=document.createElement('a');link.className='source-link';link.href=safe;link.target='_blank';link.rel='noopener noreferrer';link.textContent=label;li.appendChild(link);}else li.textContent=label;ul.appendChild(li);});inner.appendChild(ul);}if(quality.length){const ul=document.createElement('ul');ul.className='quality-list';quality.forEach(note=>{if(!hasText(note))return;const li=document.createElement('li');li.textContent=note;ul.appendChild(li);});inner.appendChild(ul);}details.appendChild(inner);els.detailContent.appendChild(details);count++;}
+        return count?1:0;
+      }
+
+      function appendArrayGroup(parent,title,items,fields){if(!Array.isArray(items)||!items.length)return 0;const group=document.createElement('div');group.className='data-group';const h=document.createElement('h4');h.textContent=title;group.appendChild(h);items.forEach(item=>{if(!isObject(item))return;const row=document.createElement('div');row.className='data-row';const parts=fields.filter(k=>item[k]!==undefined).map(k=>k+': '+displayValue(item[k]));row.textContent=parts.join(' / ');group.appendChild(row);});parent.appendChild(group);return 1;}
+      function appendObjectGroup(parent,title,obj){if(!isObject(obj)||!Object.keys(obj).length)return 0;const group=document.createElement('div');group.className='data-group';const h=document.createElement('h4');h.textContent=title;group.appendChild(h);Object.entries(obj).forEach(([key,value])=>{const row=document.createElement('div');row.className='data-row';row.textContent=key+': '+displayValue(value);group.appendChild(row);});parent.appendChild(group);return 1;}
+      function displayValue(value){if(value===null||value===undefined)return '—';if(Array.isArray(value))return value.map(displayValue).join(' – ');if(isObject(value))return Object.entries(value).map(([k,v])=>k+'='+displayValue(v)).join(' / ');return String(value);}
+      function makeSection(title){const section=document.createElement('section');section.className='section';const h=document.createElement('h3');h.textContent=title;section.appendChild(h);return section;}
+      function makeDetails(title){const details=document.createElement('details');details.className='supplement';const summary=document.createElement('summary');summary.textContent=title;details.appendChild(summary);return details;}
+      function isObject(value){return value!==null&&typeof value==='object'&&!Array.isArray(value);}
+      function hasText(value){return typeof value==='string'&&value.trim().length>0;}
+      function safeHttpUrl(value){if(!hasText(value))return null;try{const url=new URL(value);return url.protocol==='http:'||url.protocol==='https:'?url.href:null;}catch(_){return null;}}
+      function formatMetric(value,unit){if(value===null||value===undefined)return '—';const rendered=typeof value==='number'?value.toLocaleString('ja-JP',{maximumFractionDigits:8}):String(value);return rendered+unitSuffix(unit);}
+      function formatChange(value,unit){if(value===null||value===undefined)return '';const number=Number(value);const prefix=Number.isFinite(number)&&number>0?'+':'';return prefix+String(value)+unitSuffix(unit);}
+      function unitSuffix(unit){const labels={index_points:' pt',percent:'%',basis_points:' bp',percentage_points:' pt',JPY:'円',JPY_per_USD:'円/$',USD_per_barrel:' $/bbl',contracts:' 枚'};return hasText(unit)?(labels[unit]!==undefined?labels[unit]:' '+unit):'';}
+      function referenceLabel(raw){const refs=raw&&raw.reference_trading_dates;if(isObject(refs)){const values=Object.entries(refs).filter(([,v])=>hasText(v)).map(([k,v])=>k+'参照取引日: '+v);if(values.length)return values.join(' / ');}return raw&&raw.session_status==='closed'?'休場日のため各指標の基準日時を確認してください。':'';}
+
+      function sessionLabel(status) { return status==='open'?'営業日':'休場日'; }
+      function formatGenerated(value) { return String(value||'').replace('T',' ').replace(/:00\+09:00$/,' JST'); }
+      function formatUpdated(value) { if(!value)return '--'; return String(value).replace('T',' ').replace(/\+09:00$/,' JST').replace(/-/g,'/'); }
+
+      function setMarket(market) { state.market=market; document.querySelectorAll('.tab').forEach(tab=>tab.setAttribute('aria-selected',String(tab.dataset.market===market))); renderList(); }
+      document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>setMarket(tab.dataset.market)));
+      els.month.addEventListener('change',()=>{state.month=els.month.value;state.selectedId=null;loadMonth(state.month);});
+      $('reloadButton').addEventListener('click',()=>load(true));
+      $('backButton').addEventListener('click',()=>{document.body.classList.remove('show-detail'); const selected=document.querySelector('.card.selected'); if(selected)selected.focus();});
+
+      function openMenu() { els.drawer.classList.add('open'); els.overlay.classList.add('open'); els.drawer.setAttribute('aria-hidden','false'); els.menuButton.setAttribute('aria-expanded','true'); $('closeMenu').focus(); }
+      function closeMenu() { els.drawer.classList.remove('open'); els.overlay.classList.remove('open'); els.drawer.setAttribute('aria-hidden','true'); els.menuButton.setAttribute('aria-expanded','false'); els.menuButton.focus(); }
+      els.menuButton.addEventListener('click',openMenu); $('closeMenu').addEventListener('click',closeMenu); els.overlay.addEventListener('click',closeMenu);
+      document.addEventListener('keydown',event=>{ if(event.key==='Escape'&&els.drawer.classList.contains('open')) closeMenu(); });
+      load(false);
+    })();
+  </script>
+</body>
+</html>
